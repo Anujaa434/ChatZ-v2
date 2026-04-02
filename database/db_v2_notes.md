@@ -1,12 +1,9 @@
 # UKL Phase 2 — Database Setup Notes
 **Project:** ChatZ / Unified Knowledge Library (UKL) Phase 2  
-**Team:** Anuja Patil (2501133) 
 **Date:** March 30, 2026  
 **Final Status:** ✅ Fully working on PostgreSQL 16 (port 5433) with pgvector 0.8.0
 
 ---
-
-## 📦 What We Built
 
 A complete PostgreSQL 16 database schema for the UKL Phase 2 project with the following features:
 
