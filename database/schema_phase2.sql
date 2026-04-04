@@ -1,8 +1,8 @@
 -- ============================================================
--- UKL PHASE 2 — PostgreSQL 14+ Schema  (v2.3 — Hardened)
+-- UKL PHASE 2 — PostgreSQL 14+ Schema  
 -- Database: ukl_phase2
--- Team: Anuja Patil (2501133) · Akshata Shrivastava (2501173)
--- Based on: DataDict_v4 + UKL_Phase2_PromptGuide (Prompt A-1)
+-- Anuja Patil (2501133) 
+-- Based on: DataDict_v4 + UKL_Phase2_PromptGuide 
 -- ============================================================
 -- Run this file against a fresh PostgreSQL 14+ instance.
 -- It is idempotent: DROP + CREATE so you can re-run safely.
@@ -202,7 +202,7 @@ CREATE TABLE chats (
   title                     VARCHAR(255)    NOT NULL,
   pinned                    BOOLEAN         DEFAULT FALSE,
   last_message_at           TIMESTAMP       NULL,                           -- ★
-  is_auto_title_generated   BOOLEAN         DEFAULT FALSE,
+  is_auto_title_generated   BOOLEAN         DEFAULT TRUE,
   deleted_at                TIMESTAMP       NULL DEFAULT NULL,              -- soft delete
   created_at                TIMESTAMP       DEFAULT NOW(),
   updated_at                TIMESTAMP       DEFAULT NOW()
@@ -212,6 +212,23 @@ CREATE TABLE chats (
 CREATE INDEX idx_chats_user        ON chats (user_id);
 CREATE INDEX idx_chats_user_active ON chats (user_id, deleted_at);
 CREATE INDEX idx_chats_sidebar     ON chats (user_id, deleted_at, pinned DESC, last_message_at DESC);
+
+-- Trigger to prevent creating a chat without sending a message
+CREATE OR REPLACE FUNCTION check_chat_has_messages()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- We only check if there are no messages. If true, we error out.
+  IF NOT EXISTS (SELECT 1 FROM messages WHERE chat_id = NEW.id) THEN
+    RAISE EXCEPTION 'Cannot create chat without an initial message.';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER ensure_chat_has_messages
+  AFTER INSERT ON chats
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW EXECUTE FUNCTION check_chat_has_messages();
 
 -- NOTE: No trigger on chats.updated_at — it is APP-MANAGED (per DataDict v2.2).
 -- The trigger would only fire on direct UPDATE to the chats row.
