@@ -1,12 +1,9 @@
 # UKL Phase 2 — Database Setup Notes
 **Project:** ChatZ / Unified Knowledge Library (UKL) Phase 2  
-**Team:** Anuja Patil (2501133) 
 **Date:** March 30, 2026  
 **Final Status:** ✅ Fully working on PostgreSQL 16 (port 5433) with pgvector 0.8.0
 
 ---
-
-## 📦 What We Built
 
 A complete PostgreSQL 16 database schema for the UKL Phase 2 project with the following features:
 
@@ -217,7 +214,6 @@ psql -U postgres -p 5433 -d ukl_phase2 -f "C:\Users\anuja\Desktop\ChatZ\database
 
 **Why it's a gap:** If the `users` table was ever exposed, verify/reset tokens could be reused by an attacker to verify accounts or reset passwords without authorization.
 
-**For submission:** This is acceptable and very common in academic projects. Be ready to explain if asked.
 
 **The proper fix** (production):
 ```javascript
@@ -236,8 +232,6 @@ const user = await db.query('SELECT * FROM users WHERE email_verify_token = $1',
 ### ⚠️ Known Gap 2 — No Session Cleanup Job
 
 **Issue:** `user_sessions` will accumulate dead rows (expired or revoked sessions) over time with no automated cleanup.
-
-**For submission:** Document this as a known limitation. Mentioning it shows awareness.
 
 **Production fix** — scheduled cron job (e.g., runs nightly):
 ```sql
@@ -294,7 +288,7 @@ Vector Search Tuning          ██████████  10/10  ✅ IVFFlat
 Overall Score:  9.4 / 10  🏆
 ```
 
-> These gaps are **documented and understood** — which in production engineering is half the battle. Unknown gaps are dangerous; known gaps are manageable.
+> These gaps are **documented and understood** — Unknown gaps are dangerous; known gaps are manageable.
 
 ---
 
