@@ -1,0 +1,466 @@
+/* =============================================================
+   AUTH — Phase 2 · UKL Design System
+   Dark purple palette · DM Sans · glassmorphic cards
+   ============================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+/* ── Design tokens ─────────────────────────────────────────── */
+:root {
+  --ukl-bg:            #0a0a10;
+  --ukl-surface:       #0d0d18;
+  --ukl-card:          linear-gradient(145deg, #0a0a14 0%, #0d0820 100%);
+  --ukl-border:        #1e1e30;
+  --ukl-border-soft:   #181828;
+  --ukl-text:          #c0c0d0;
+  --ukl-text-strong:   #e8e8f8;
+  --ukl-muted:         #44445a;
+  --ukl-accent:        #5227FF;
+  --ukl-accent-light:  #7c52ff;
+  --ukl-accent-hover:  #6338ff;
+  --ukl-placeholder:   #2a2a40;
+}
+
+/* ── Base reset ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  background: var(--ukl-bg);
+  color: var(--ukl-text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Page shell ─────────────────────────────────────────────── */
+.ukl-auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: var(--ukl-bg);
+  position: relative;
+}
+
+/* soft radial glow in the background */
+.ukl-auth-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 700px 500px at 50% 0%, rgba(82, 39, 255, 0.07), transparent 70%),
+    radial-gradient(ellipse 400px 400px at 20% 80%, rgba(82, 39, 255, 0.04), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Card shared ────────────────────────────────────────────── */
+.ukl-card {
+  position: relative;
+  z-index: 1;
+  background: var(--ukl-card);
+  border: 1px solid var(--ukl-border);
+  border-radius: 16px;
+  overflow: hidden;
+
+  /* card glow pulse */
+  animation: ukl-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes ukl-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* inner ambient glow */
+.ukl-card-glow {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  background: radial-gradient(circle, rgba(82, 39, 255, 0.11), transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* ── Logo box ───────────────────────────────────────────────── */
+.ukl-logo {
+  width: 44px;
+  height: 44px;
+  background: var(--ukl-accent);
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 11px;
+  color: #fff;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px rgba(82, 39, 255, 0.35);
+  transition: transform 0.2s ease;
+}
+
+.ukl-logo:hover {
+  transform: scale(1.06);
+}
+
+/* ── Typography ─────────────────────────────────────────────── */
+.ukl-title {
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--ukl-text-strong);
+  letter-spacing: -0.02em;
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.ukl-sub {
+  font-size: 13px;
+  color: var(--ukl-muted);
+  text-align: center;
+  line-height: 1.55;
+}
+
+/* ── Input fields ───────────────────────────────────────────── */
+.ukl-field {
+  width: 100%;
+  background: #111120;
+  border: 1px solid var(--ukl-border);
+  border-radius: 9px;
+  padding: 11px 14px;
+  color: #d0d0e8;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ukl-field::placeholder {
+  color: var(--ukl-placeholder);
+}
+
+.ukl-field:focus {
+  border-color: var(--ukl-accent);
+  box-shadow: 0 0 0 3px rgba(82, 39, 255, 0.14);
+}
+
+.ukl-field.ukl-input-error {
+  border-color: #cc4444;
+}
+
+/* password toggle wrapper */
+.ukl-field-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.ukl-field-wrap .ukl-field {
+  padding-right: 40px;
+}
+
+.ukl-eye-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ukl-muted);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  transition: color 0.15s ease;
+}
+
+.ukl-eye-toggle:hover {
+  color: var(--ukl-text);
+}
+
+/* forgot password link */
+.ukl-forgot {
+  font-size: 11.5px;
+  color: var(--ukl-muted);
+  text-align: right;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  text-decoration: none;
+}
+
+.ukl-forgot:hover {
+  color: var(--ukl-accent-light);
+}
+
+/* ── Primary button ─────────────────────────────────────────── */
+.ukl-btn {
+  width: 100%;
+  background: var(--ukl-accent);
+  border: none;
+  border-radius: 9px;
+  padding: 12px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+  box-shadow: 0 8px 24px rgba(82, 39, 255, 0.3);
+}
+
+.ukl-btn:hover:not(:disabled) {
+  background: var(--ukl-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(82, 39, 255, 0.38);
+}
+
+.ukl-btn:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.ukl-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Divider ────────────────────────────────────────────────── */
+.ukl-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ukl-divider-line {
+  flex: 1;
+  height: 1px;
+  background: #1a1a28;
+}
+
+.ukl-divider-text {
+  font-size: 11px;
+  color: #2a2a40;
+}
+
+/* ── Google button ──────────────────────────────────────────── */
+.ukl-google-btn {
+  width: 100%;
+  background: #111120;
+  border: 1px solid var(--ukl-border);
+  border-radius: 9px;
+  padding: 10px;
+  color: #9090a8;
+  font-size: 12.5px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.ukl-google-btn:hover {
+  border-color: #2e2e48;
+  background: #14142a;
+  color: #c0c0d8;
+}
+
+/* ── Footer link ────────────────────────────────────────────── */
+.ukl-footer-text {
+  font-size: 12px;
+  color: #44445a;
+  text-align: center;
+}
+
+.ukl-footer-text a,
+.ukl-footer-text span {
+  color: #7060d0;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.ukl-footer-text a:hover,
+.ukl-footer-text span:hover {
+  color: var(--ukl-accent-light);
+}
+
+/* ── Error / success messages ───────────────────────────────── */
+.ukl-error {
+  font-size: 12px;
+  color: #fc8181;
+  background: rgba(204, 68, 68, 0.08);
+  border: 1px solid rgba(204, 68, 68, 0.2);
+  border-radius: 7px;
+  padding: 8px 12px;
+  text-align: center;
+}
+
+.ukl-success {
+  font-size: 12px;
+  color: #68d391;
+  background: rgba(34, 170, 96, 0.08);
+  border: 1px solid rgba(34, 170, 96, 0.2);
+  border-radius: 7px;
+  padding: 8px 12px;
+  text-align: center;
+}
+
+.ukl-field-error {
+  font-size: 11px;
+  color: #fc8181;
+  margin-top: 4px;
+}
+
+/* ── Progress bar (signup steps) ────────────────────────────── */
+.ukl-prog-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 26px;
+}
+
+.ukl-prog-dot {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  transition: background 0.25s ease;
+}
+
+.ukl-prog-dot.done   { background: var(--ukl-accent); }
+.ukl-prog-dot.active { background: #8060ff; }
+.ukl-prog-dot.todo   { background: #1a1a2a; }
+
+/* ── Terms checkbox ─────────────────────────────────────────── */
+.ukl-terms-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  background: #111120;
+  border: 1px solid var(--ukl-border);
+  border-radius: 9px;
+}
+
+.ukl-checkbox {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  border: none;
+  background: var(--ukl-accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.ukl-checkbox:hover {
+  background: var(--ukl-accent-hover);
+}
+
+.ukl-terms-text {
+  font-size: 11.5px;
+  color: #555568;
+  line-height: 1.5;
+}
+
+.ukl-terms-text a {
+  color: #7060d0;
+  text-decoration: none;
+}
+
+.ukl-terms-text a:hover {
+  color: var(--ukl-accent-light);
+  text-decoration: underline;
+}
+
+/* ── Animated background orbs ───────────────────────────────── */
+.ukl-bg-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+  animation: ukl-orb-drift 16s ease-in-out infinite alternate;
+}
+
+.ukl-bg-orb--1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(82,39,255,0.09) 0%, transparent 70%);
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ukl-bg-orb--2 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(82,39,255,0.05) 0%, transparent 70%);
+  bottom: -80px;
+  right: 10%;
+  animation-duration: 20s;
+  animation-direction: alternate-reverse;
+}
+
+@keyframes ukl-orb-drift {
+  from { transform: translateY(0) translateX(0); }
+  to   { transform: translateY(-30px) translateX(15px); }
+}
+
+/* ── Button loading state + inline spinner ──────────────────── */
+.ukl-btn--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.ukl-spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: ukl-spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes ukl-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .ukl-auth-page {
+    padding: 16px;
+  }
+  .ukl-card {
+    padding: 32px 24px !important;
+  }
+}

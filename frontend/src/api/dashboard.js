@@ -56,8 +56,12 @@ export async function sendMessage({ chatId, message, model = "gemini-1.5-pro", f
   return data; // { reply: "...", messageId: "..." }
 }
 
+// PHASE 4A — renameChat (merged duplicate — was declared twice, causing build crash)
+// WHY: There were two renameChat functions. JS doesn't allow duplicate exports.
+// The first used /api/dashboard/chats/:id, the second used /api/chats/:id.
+// We keep /api/chats/:id because chat.routes.js handles PUT /:chatId → renameChat controller.
 export async function renameChat(id, title) {
-  const { data } = await api.put(`/api/dashboard/chats/${id}`, { title });
+  const { data } = await api.put(`/api/chats/${id}`, { title });
   return data;
 }
 

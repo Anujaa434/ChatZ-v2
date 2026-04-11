@@ -7,7 +7,7 @@ const morgan = require("morgan");
 
 const pool = require("./config/db");
 const authRoutes = require("./routes/auth.routes");
-const geminiRoutes = require("./routes/gemini.routes");
+// gemini.routes removed — AI handled via chat.routes → ai.service.js
 const chatRoutes = require("./routes/chat.routes"); // ✅ NEW
 const noteRoutes = require("./routes/note.routes"); // ✅ NEW
 
@@ -69,7 +69,7 @@ app.get("/api/status", async (req, res) => {
 const dashboardRoutes = require("./routes/dashboard.routes"); // ✅ NEW
 
 app.use("/api/auth", authRoutes);
-app.use("/api/gemini", geminiRoutes);
+// /api/gemini removed — use POST /api/chats/send with model: "gemini"
 app.use("/api/chats", chatRoutes);          // ✅ CHAT PERSISTENCE ROUTES
 app.use("/api/notes", noteRoutes);           // ✅ NOTES + FOLDER ROUTES
 app.use("/api/dashboard", dashboardRoutes);  // ✅ DASHBOARD SYNC + FOLDER/NOTE/CHAT CRUD
