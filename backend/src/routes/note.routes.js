@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const noteController = require("../controllers/note.controller");
-const auth = require("../middlewares/auth.middleware");
+const auth = require("../middleware/auth.middleware");
 
 // Folder routes (place before parameterized note routes to avoid conflicts)
 router.get("/folders/list/all", auth.requireAuth, noteController.getFolders);

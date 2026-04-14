@@ -1,6 +1,6 @@
 // frontend/src/api/dashboard.js
 // Unified API client for dashboard data: folders, chats, notes
-import api from "./axios";
+import api from "./client";
 
 // ── Dashboard sync (all folders + contents) ───────────────────────────────
 export async function syncDashboard() {

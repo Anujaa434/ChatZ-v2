@@ -13,7 +13,7 @@ const {
   resetPassword,
 } = require("../controllers/auth.controller");
 
-const { requireAuth } = require("../middlewares/auth.middleware");
+const { requireAuth } = require("../middleware/auth.middleware");
 
 // ── Public routes ──────────────────────────────────────────────────────────
 router.post("/signup",           signup);

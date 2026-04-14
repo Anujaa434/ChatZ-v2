@@ -27,7 +27,7 @@ function relativeTime(dateStr) {
   return days === 1 ? "Yesterday" : `${days}d ago`;
 }
 
-export default function WorkspaceHome({ folder, onOpenChat, onOpenNote, onCreateChat, onCreateNote, onShowToast }) {
+export default function WorkspaceHome({ folder, onOpenChat, onOpenNote, onCreateChat, onCreateNote, onShowToast, onCtx }) {
   // folder may have chats[], notes[] if it was selected from the tree
   const chats = folder?.chats || [];
   const notes = folder?.notes || [];
@@ -66,6 +66,7 @@ export default function WorkspaceHome({ folder, onOpenChat, onOpenNote, onCreate
               <div className="wch-icon-wrap chat"><ChatIcon /></div>
               <span className="wch-title">{c.title}</span>
               {c.pinned && <span className="wch-badge">📌</span>}
+              <button className="fi-menu" style={{marginLeft: "auto", border: "none", background: "transparent", color: "var(--faint)", cursor: "pointer"}} onClick={e=>{e.stopPropagation(); if (onCtx) onCtx(e, "chat", c.id, { onDelete: () => {}, onRename: () => {} });}}>⋮</button>
             </div>
             <div className="wsh-snip">{c.last_message || "No messages yet"}</div>
             <div className="wsh-foot">
@@ -97,6 +98,7 @@ export default function WorkspaceHome({ folder, onOpenChat, onOpenNote, onCreate
             <div className="wsh-card-hd">
               <div className="wch-icon-wrap note"><NoteIcon /></div>
               <span className="wch-title">{n.title}</span>
+              <button className="fi-menu" style={{marginLeft: "auto", border: "none", background: "transparent", color: "var(--faint)", cursor: "pointer"}} onClick={e=>{e.stopPropagation(); if (onCtx) onCtx(e, "note", n.id, { onDelete: () => {} });}}>⋮</button>
             </div>
             <div className="wsh-snip">{n.content?.slice(0, 100) || "Empty note"}</div>
             <div className="wsh-foot">

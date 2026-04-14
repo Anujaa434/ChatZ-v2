@@ -24,8 +24,8 @@ if (!GoogleGenAI) {
 
 async function getGeminiResponse(message) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("Gemini not configured: GEMINI_API_KEY not set");
+  if (!apiKey || apiKey.startsWith("AIza...")) {
+    return `[Mock Gemini 1.5 Pro] I received: "${message.slice(0, 100)}...". \n\n(Please configure a real GEMINI_API_KEY in backend/.env to get true AI responses!)`;
   }
 
   // Try to validate message

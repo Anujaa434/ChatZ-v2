@@ -2,8 +2,8 @@
 // Phase 2 upgrade: accessToken + refreshToken dual-storage, refresh-aware login
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { login as apiLogin, logout as apiLogout, getProfile } from "../api/auth.axios";
-import { setAuthToken } from "../api/axios";
+import { login as apiLogin, logout as apiLogout, getProfile } from "../api/auth";
+import { setAuthToken } from "../api/client";
 
 export const AuthContext = createContext({
   user: null,

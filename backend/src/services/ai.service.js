@@ -12,21 +12,10 @@ function normalizeModel(input) {
 
 function demoResponse(provider, model, message) {
   const safeMsg = (message || "").toString().slice(0, 400);
-  if (provider === "chatgpt") {
-    return [
-      "ChatGPT integration coming soon.",
-      safeMsg ? `You said: "${safeMsg}"` : null,
-    ].filter(Boolean).join("\n\n");
-  }
-  if (provider === "claude") {
-    return [
-      "Claude support will be added shortly.",
-      safeMsg ? `You said: "${safeMsg}"` : null,
-    ].filter(Boolean).join("\n\n");
-  }
   return [
-    `${model || "Selected model"} is not configured yet.`,
-    safeMsg ? `You said: "${safeMsg}"` : null,
+    `🤖 [Mock ${model || provider}] Reply`,
+    `I received your message: "${safeMsg}..."`,
+    `(Configure a real API key in backend/.env to connect to true AI models.)`
   ].filter(Boolean).join("\n\n");
 }
 

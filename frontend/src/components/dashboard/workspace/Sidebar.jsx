@@ -332,7 +332,7 @@ function AddPop({ onAddChat, onRequestNoteForm, onClose }) {
 
 /* ═══ DROPPABLE FOLDER ZONE (for cross-folder DnD) ═══════════════════ */
 function DroppableFolder({ folderId, children }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `folder-${folderId}` });
+  const { setNodeRef, isOver } = useDroppable({ id: `dropzone-folder-${folderId}` });
   return (
     <div ref={setNodeRef} style={{
       outline: isOver ? "2px dashed var(--accent-border)" : "none",
@@ -414,20 +414,8 @@ function FolderRow({
   const [activeItem, setActiveItem] = useState(null);
   const sensors = useSensors(useSensor(PointerSensor,{activationConstraint:{distance:5}}));
 
-  function handleDragStart(e) {
-    setActiveItem(dndItems.find(i=>String(i.id)===String(e.active.id))||null);
-  }
-  function handleDragEnd(e) {
-    setActiveItem(null);
-    const { active, over } = e;
-    if (!over||active.id===over.id) return;
-    const oi = dndItems.findIndex(i=>String(i.id)===String(active.id));
-    const ni = dndItems.findIndex(i=>String(i.id)===String(over.id));
-    if (oi<0||ni<0) return;
-    const reordered = arrayMove(dndItems,oi,ni);
-    setChats(reordered.filter(i=>i._type==="chat"));
-    setNotes(reordered.filter(i=>i._type==="note"));
-  }
+  // Instead of handling drag end locally, we rely on WorkspaceView's global DndContext
+  // We just render the SortableContext here.
 
   function handleFolderClick() { setOpen(o=>!o); onSelectFolder(folder); }
   function commitRename(n) { setRenaming(false); if(n) onRenameFolder(folder.id,n); }
@@ -485,23 +473,17 @@ function FolderRow({
             ))}
 
             {dndItems.length>0?(
-              <DndContext sensors={sensors} collisionDetection={closestCenter}
-                onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                <SortableContext items={dndItems.map(i=>String(i.id))} strategy={verticalListSortingStrategy}>
-                  {dndItems.map(item=>(
-                    <SortableFolderItem
-                      key={item.id} id={String(item.id)}
-                      name={item.title} type={item._type} color={item.color}
-                      active={item._type==="chat"?activeChat?.id===item.id:activeNote?.id===item.id}
-                      onClick={()=>item._type==="chat"?onOpenChat(item):onOpenNote(item)}
-                      onCtx={onCtx}
-                    />
-                  ))}
-                </SortableContext>
-                <DragOverlay>
-                  {activeItem?<DragOverlayItem name={activeItem.title} type={activeItem._type} color={activeItem.color}/>:null}
-                </DragOverlay>
-              </DndContext>
+              <SortableContext items={dndItems.map(i=>`item-${i._type}-${i.id}`)} strategy={verticalListSortingStrategy}>
+                {dndItems.map(item=>(
+                  <SortableFolderItem
+                    key={`item-${item._type}-${item.id}`} id={`item-${item._type}-${item.id}`}
+                    name={item.title} type={item._type} color={item.color}
+                    active={item._type==="chat"?activeChat?.id===item.id:activeNote?.id===item.id}
+                    onClick={()=>item._type==="chat"?onOpenChat(item):onOpenNote(item)}
+                    onCtx={onCtx}
+                  />
+                ))}
+              </SortableContext>
             ):children.length===0?(
               <div style={{padding:"4px 8px 4px 22px",color:"var(--faint)",fontSize:11}}>
                 Empty — click ＋ to add
@@ -514,58 +496,12 @@ function FolderRow({
   );
 }
 
-/* ═══ CROSS-FOLDER DND WRAPPER ════════════════════════════════════════ */
-function CrossFolderDndProvider({ folders, onMoveItem, children }) {
-  const [draggingId, setDraggingId] = useState(null);
-  const [draggingType, setDraggingType] = useState(null);
-  const sensors = useSensors(useSensor(PointerSensor,{activationConstraint:{distance:8}}));
-
-  // Flatten all items for lookup
-  const allItems = [];
-  (function collect(arr) {
-    arr.forEach(f=>{
-      (f.chats||[]).forEach(c=>allItems.push({...c,_type:"chat",folderId:f.id}));
-      (f.notes||[]).forEach(n=>allItems.push({...n,_type:"note",folderId:f.id}));
-      collect(f.children||[]);
-    });
-  })(folders);
-
-  function handleDragStart(e) {
-    const item = allItems.find(i=>String(i.id)===String(e.active.id));
-    if (item) { setDraggingId(e.active.id); setDraggingType(item._type); }
-  }
-
-  function handleDragEnd(e) {
-    setDraggingId(null); setDraggingType(null);
-    const { active, over } = e;
-    if (!over) return;
-    // Check if dropped onto a folder zone
-    if (String(over.id).startsWith("folder-")) {
-      const targetFolderId = Number(over.id.replace("folder-",""));
-      const item = allItems.find(i=>String(i.id)===String(active.id));
-      if (item && item.folderId !== targetFolderId) {
-        onMoveItem(item, targetFolderId);
-      }
-    }
-  }
-
-  const dragItem = allItems.find(i=>String(i.id)===String(draggingId));
-
-  return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter}
-      onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      {children}
-      <DragOverlay>
-        {dragItem?<DragOverlayItem name={dragItem.title} type={dragItem._type} color={dragItem.color}/>:null}
-      </DragOverlay>
-    </DndContext>
-  );
-}
+/* ═══ CROSS-FOLDER DND WRAPPER REMOVED (integrated below) ════════════ */
 
 /* ═══ SORTABLE FOLDER ROW WRAPPER ════════════════════════════════════ */
 function SortableFolderRow({ folder, ...props }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: String(folder.id) });
+    useSortable({ id: `folder-${folder.id}` });
   return (
     <div ref={setNodeRef} style={{transform:toTransformStyle(transform),transition,opacity:isDragging?0.4:1}}>
       <div style={{display:"flex",alignItems:"flex-start"}}>
@@ -598,21 +534,59 @@ function WorkspaceView({
   const [globalMenu,      setGlobalMenu]      = useState(false);
   const globalMenuRef = useRef(null);
 
-  const [folderOrder, setFolderOrder] = useState(folders.map(f=>String(f.id)));
-  useEffect(()=>{ setFolderOrder(folders.map(f=>String(f.id))); },[folders]);
-  const sortedFolders = folderOrder.map(id=>folders.find(f=>String(f.id)===id)).filter(Boolean);
+  const [folderOrder, setFolderOrder] = useState(folders.map(f=>`folder-${f.id}`));
+  useEffect(()=>{ setFolderOrder(folders.map(f=>`folder-${f.id}`)); },[folders]);
+  const sortedFolders = folderOrder.map(id=>folders.find(f=>`folder-${f.id}`===id)).filter(Boolean);
 
   const [activeDragFolder, setActiveDragFolder] = useState(null);
+  const [activeDragItem, setActiveDragItem] = useState(null);
   const sensors = useSensors(useSensor(PointerSensor,{activationConstraint:{distance:5}}));
 
-  function handleFolderDragStart(e){ setActiveDragFolder(folders.find(f=>String(f.id)===String(e.active.id))||null); }
-  function handleFolderDragEnd(e) {
+  // Flatten all items for lookup across the entire tree
+  const allItems = [];
+  (function collect(arr) {
+    arr.forEach(f=>{
+      (f.chats||[]).forEach(c=>allItems.push({...c,_type:"chat",folderId:f.id}));
+      (f.notes||[]).forEach(n=>allItems.push({...n,_type:"note",folderId:f.id}));
+      collect(f.children||[]);
+    });
+  })(folders);
+
+  function handleGlobalDragStart(e) {
+    if (String(e.active.id).startsWith("folder-")) {
+      setActiveDragFolder(folders.find(f=>`folder-${f.id}`===String(e.active.id))||null);
+    } else if (String(e.active.id).startsWith("item-")) {
+      const item = allItems.find(i=>`item-${i._type}-${i.id}`===String(e.active.id));
+      setActiveDragItem(item || null);
+    }
+  }
+
+  function handleGlobalDragEnd(e) {
     setActiveDragFolder(null);
+    setActiveDragItem(null);
     const { active, over } = e;
-    if (!over||active.id===over.id) return;
-    const o = folderOrder.indexOf(String(active.id));
-    const n = folderOrder.indexOf(String(over.id));
-    if (o>=0&&n>=0) setFolderOrder(fo=>arrayMove(fo,o,n));
+    if (!over) return;
+    
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    // 1) Folder reordering
+    if (activeId.startsWith("folder-") && overId.startsWith("folder-")) {
+      if (activeId === overId) return;
+      const o = folderOrder.indexOf(activeId);
+      const n = folderOrder.indexOf(overId);
+      if (o>=0 && n>=0) setFolderOrder(fo=>arrayMove(fo,o,n));
+      return;
+    }
+
+    // 2) Moving an item to a folder dropzone
+    if (activeId.startsWith("item-") && overId.startsWith("dropzone-folder-")) {
+      const targetFolderId = Number(overId.replace("dropzone-folder-",""));
+      const item = allItems.find(i=>`item-${i._type}-${i.id}`===activeId);
+      if (item && item.folderId !== targetFolderId) {
+        onMoveItem(item, targetFolderId);
+      }
+    }
   }
 
   return (
@@ -717,31 +691,32 @@ function WorkspaceView({
 
         {/* FOLDER TREE — outer folder sort DnD */}
         {!loading&&(
-          <CrossFolderDndProvider folders={folders} onMoveItem={onMoveItem}>
-            <DndContext sensors={sensors} collisionDetection={closestCenter}
-              onDragStart={handleFolderDragStart} onDragEnd={handleFolderDragEnd}>
-              <SortableContext items={folderOrder} strategy={verticalListSortingStrategy}>
-                {sortedFolders.map(folder=>(
-                  <SortableFolderRow key={folder.id} folder={folder}
-                    activeChat={activeChat} activeNote={activeNote} activeFolder={activeFolder}
-                    onOpenChat={onOpenChat} onOpenNote={onOpenNote}
-                    onCreateChat={onCreateChat} onCreateNote={onCreateNote}
-                    onSelectFolder={onSelectFolder}
-                    onRenameFolder={onRenameFolder} onDeleteFolder={onDeleteFolder}
-                    onCtx={onCtx} onShowToast={onShowToast}/>
-                ))}
-              </SortableContext>
-              <DragOverlay>
-                {activeDragFolder?(
-                  <div style={{background:"var(--card)",border:"1px solid var(--accent-border)",borderRadius:8,
-                    padding:"6px 10px",boxShadow:"0 8px 32px rgba(0,0,0,.4)",display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{width:8,height:8,borderRadius:"50%",background:activeDragFolder.color||"var(--accent)"}}/>
-                    <span style={{fontSize:12.5,color:"var(--text)"}}>{activeDragFolder.name}</span>
-                  </div>
-                ):null}
-              </DragOverlay>
-            </DndContext>
-          </CrossFolderDndProvider>
+          <DndContext sensors={sensors} collisionDetection={closestCenter}
+            onDragStart={handleGlobalDragStart} onDragEnd={handleGlobalDragEnd}>
+            <SortableContext items={folderOrder} strategy={verticalListSortingStrategy}>
+              {sortedFolders.map(folder=>(
+                <SortableFolderRow key={`folder-${folder.id}`} folder={folder}
+                  activeChat={activeChat} activeNote={activeNote} activeFolder={activeFolder}
+                  onOpenChat={onOpenChat} onOpenNote={onOpenNote}
+                  onCreateChat={onCreateChat} onCreateNote={onCreateNote}
+                  onSelectFolder={onSelectFolder}
+                  onRenameFolder={onRenameFolder} onDeleteFolder={onDeleteFolder}
+                  onCtx={onCtx} onShowToast={onShowToast}/>
+              ))}
+            </SortableContext>
+            <DragOverlay>
+              {activeDragFolder?(
+                <div style={{background:"var(--card)",border:"1px solid var(--accent-border)",borderRadius:8,
+                  padding:"6px 10px",boxShadow:"0 8px 32px rgba(0,0,0,.4)",display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:activeDragFolder.color||"var(--accent)"}}/>
+                  <span style={{fontSize:12.5,color:"var(--text)"}}>{activeDragFolder.name}</span>
+                </div>
+              ):null}
+              {activeDragItem?(
+                <DragOverlayItem name={activeDragItem.title} type={activeDragItem._type} color={activeDragItem.color}/>
+              ):null}
+            </DragOverlay>
+          </DndContext>
         )}
 
         {/* Empty state */}

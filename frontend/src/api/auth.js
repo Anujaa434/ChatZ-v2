@@ -1,4 +1,4 @@
-import api, { setAuthToken } from "./axios";
+import api, { setAuthToken } from "./client";
 
 export async function signup(payload) {
   const res = await api.post("/api/auth/signup", payload);

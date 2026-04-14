@@ -5,8 +5,8 @@
 import React, { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { signup } from "../../api/auth.axios";
-import { setAuthToken } from "../../api/axios";
+import { signup } from "../../api/auth";
+import { setAuthToken } from "../../api/client";
 import "../../styles/auth.css";
 
 const STEPS = 3;

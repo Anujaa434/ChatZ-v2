@@ -5,7 +5,7 @@ import { ProtectedRoute, PublicRoute } from "./components/ProtectedRoute";
 
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
-import Dashboard from "./components/dashboard/DashboardV5";
+import Dashboard from "./components/dashboard/Dashboard";
 
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";

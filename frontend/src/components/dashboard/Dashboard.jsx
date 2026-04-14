@@ -1,19 +1,19 @@
-// frontend/src/components/dashboard/DashboardV5.jsx
+// frontend/src/components/dashboard/Dashboard.jsx
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import "../../styles/ukl.css";
+import "../../styles/dashboard.css";
 
-import IconRail      from "./v5/IconRail";
-import Sidebar       from "./v5/Sidebar";
-import Topbar        from "./v5/Topbar";
-import WorkspaceHome from "./v5/WorkspaceHome";
-import ChatPane      from "./v5/ChatPane";
-import NotePane      from "./v5/NotePane";
-import AIPanel       from "./v5/AIPanel";
-import ContextPanel  from "./v5/ContextPanel";
-import ContextMenu   from "./v5/ContextMenu";
-import SettingsView  from "./v5/SettingsView";
-import Toast         from "./v5/Toast";
+import IconRail      from "./workspace/IconRail";
+import Sidebar       from "./workspace/Sidebar";
+import Topbar        from "./workspace/Topbar";
+import WorkspaceHome from "./workspace/WorkspaceHome";
+import ChatPane      from "./workspace/ChatPane";
+import NotePane      from "./workspace/NotePane";
+import AIPanel       from "./workspace/AIPanel";
+import ContextPanel  from "./workspace/ContextPanel";
+import ContextMenu   from "./workspace/ContextMenu";
+import SettingsView  from "./workspace/SettingsView";
+import Toast         from "./workspace/Toast";
 
 import {
   syncDashboard,
@@ -22,7 +22,7 @@ import {
   createNote, getNote, updateNote, deleteNote, renameChat,
 } from "../../api/dashboard";
 
-export default function DashboardV5() {
+export default function Dashboard() {
   const { user, logout } = useAuth();
 
   /* ── Layout ─────────────────────────────────────────── */
@@ -254,7 +254,7 @@ export default function DashboardV5() {
   }
 
   /* ── Send Message ───────────────────────────────────── */
-  async function handleSendMessage(text, chatId) {
+  async function handleSendMessage(text, model, chatId) {
     if (!text?.trim()) return;
     const tempId = Date.now();
     setMessages(m => [...m, { id: tempId, role: "user", content: text, created_at: new Date().toISOString() }]);
@@ -263,6 +263,7 @@ export default function DashboardV5() {
       const res = await sendMessage({ 
         chatId: chatId || null, 
         message: text,
+        model: model || "gemini",
         folderId: !chatId && activeChat ? activeChat.folder_id : null 
       });
       
@@ -272,7 +273,10 @@ export default function DashboardV5() {
         await loadDashboard(); // refresh sidebar 
       }
 
-      setMessages(m => [...m, { id: tempId + 1, role: "ai", content: res.reply || res.message || "…", created_at: new Date().toISOString() }]);
+      // Sync with real messages from database so we have true DB IDs for pinning/deleting 
+      // instead of tempId
+      const realMsgs = await getMessages(res.chatId);
+      setMessages(realMsgs);
     } catch {
       showToast("⚠️ AI reply failed — check GEMINI_API_KEY");
       setMessages(m => m.filter(msg => msg.id !== tempId));
@@ -389,6 +393,21 @@ export default function DashboardV5() {
               onCreateChat={() => handleCreateChat(activeFolder?.id)}
               onCreateNote={(fId, title, color) => handleCreateNote(fId ?? activeFolder?.id, title, color)}
               onShowToast={showToast}
+              onCtx={(e, type, id) => {
+                showCtxMenu(e, type, id, {
+                  onDelete: () => {
+                    if (type === "chat") handleDeleteChat(id);
+                    else if (type === "note") handleDeleteNote(id);
+                  },
+                  onRename: () => {
+                    if (type === "chat") {
+                      const c = (findFolderInTree(folders, activeFolder?.id || "inbox")?.chats || inbox.chats || []).find(x => x.id === id);
+                      const newTitle = window.prompt("Rename chat:", c?.title || "");
+                      if (newTitle?.trim()) handleRenameChat(id, newTitle.trim());
+                    }
+                  }
+                });
+              }}
             />
           </div>
         )}
@@ -400,10 +419,11 @@ export default function DashboardV5() {
             <ChatPane
               chat={activeChat}
               messages={messages}
-              onSend={text => handleSendMessage(text, activeChat.id)}
+              onSend={(text, model) => handleSendMessage(text, model, activeChat.id)}
               onOpenNote={openNote}
               onShowToast={showToast}
               onShowCtx={showCtxMenu}
+              onEmptyChat={handleDeleteChat}
             />
           </div>
         )}
@@ -434,10 +454,11 @@ export default function DashboardV5() {
               <ChatPane
                 chat={activeChat}
                 messages={messages}
-                onSend={text => handleSendMessage(text, activeChat.id)}
+                onSend={(text, model) => handleSendMessage(text, model, activeChat.id)}
                 onOpenNote={openNote}
                 onShowToast={showToast}
                 onShowCtx={showCtxMenu}
+                onEmptyChat={handleDeleteChat}
               />
             )}
 

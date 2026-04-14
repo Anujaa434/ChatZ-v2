@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { forgotPassword } from "../../api/auth.axios";
+import { forgotPassword } from "../../api/auth";
 import "../../styles/auth.css";
 
 export default function ForgotPassword() {

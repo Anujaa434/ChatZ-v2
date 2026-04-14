@@ -24,10 +24,42 @@ exports.getChats = async (req, res) => {
 
 /**
  * CREATE a new chat
+ *
+ * PHASE 4A — Bug Fix 3
+ * WHAT:  createChat now actually creates a chat instead of returning 400.
+ * WHY:   A previous decision blocked all direct chat creation to enforce
+ *        "no empty chats" — but this broke sidebar-initiated creation where
+ *        the user names the chat before starting. The lazy creation via
+ *        sendMessage (createChatWithMessage) handles the "no empty chat" case
+ *        for chat-first flows. Direct creation is still valid for named chats.
+ * HOW:   Reads title and folder_id from req.body, falls back to "New Chat".
+ *        Uses Chat.createChatWithMessage to stay consistent with the schema.
+ * FLOW:  POST /api/chats
+ *          → { title, folder_id } from body
+ *          → Chat.createChatWithMessage({ userId, folderId, title })
+ *          → 201 { id, title, ... }
  */
 exports.createChat = async (req, res) => {
-  // A chat can no longer be created independently of a message as per DB trigger.
-  return res.status(400).json({ error: "Cannot create chat without an initial message" });
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = req.user.id;
+    const { title = "New Chat", folder_id = null } = req.body;
+
+    // Use createChatWithMessage with no initial message — only creates chat row
+    const chat = await require("../models/chat.model").createChat({
+      userId,
+      title: title.trim() || "New Chat",
+      folderId: folder_id || null,
+    });
+
+    res.status(201).json(chat);
+  } catch (err) {
+    console.error("Create chat failed:", err);
+    res.status(500).json({ error: "Failed to create chat" });
+  }
 };
 
 

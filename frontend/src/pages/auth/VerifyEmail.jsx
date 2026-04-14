@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { verifyEmail } from "../../api/auth.axios";
+import { verifyEmail } from "../../api/auth";
 import "../../styles/auth.css";
 
 export default function VerifyEmail() {

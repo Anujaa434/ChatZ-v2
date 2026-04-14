@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { resetPassword } from "../../api/auth.axios";
+import { resetPassword } from "../../api/auth";
 import "../../styles/auth.css";
 
 export default function ResetPassword() {

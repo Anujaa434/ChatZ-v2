@@ -7,7 +7,7 @@
 //       responses are read-only (copy is the only sensible action).
 
 import { useState, useRef, useEffect } from "react";
-import api from "../../../api/axios";
+import api from "../../../api/client";
 import { createNote } from "../../../api/dashboard";
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ const NoteIcon = () => (
 
 // ── Component ─────────────────────────────────────────────────────────────
 export default function ChatPane({
-  chat, messages = [], onSend, onShowToast, onShowCtx, onOpenNote, onRefreshMessages,
+  chat, messages = [], onSend, onShowToast, onShowCtx, onOpenNote, onRefreshMessages, onEmptyChat,
 }) {
   const [input, setInput]              = useState("");
   const [sending, setSending]          = useState(false);
@@ -50,6 +50,9 @@ export default function ChatPane({
   const [localMsgs, setLocalMsgs]      = useState(messages);
   const [dropdown, setDropdown]        = useState(null); // { msgId, x, y }
   const [pinnedCursor, setPinnedCursor] = useState(0);
+  const [selectedModel, setSelectedModel] = useState("gemini");
+  const [selectMode, setSelectMode]       = useState(false);
+  const [selectedIds, setSelectedIds]     = useState(new Set());
 
   const msgsRef         = useRef(null);
   const dropRef         = useRef(null);
@@ -87,10 +90,13 @@ export default function ChatPane({
     const text = input.trim();
     setInput("");
     setSending(true);
-    try { await onSend(text); } finally { setSending(false); }
+    try { await onSend(text, selectedModel); } finally { setSending(false); }
   }
   function handleKey(e) {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleSend();
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
   }
 
   // ── Open dropdown (prompt ⋮ only) ─────────────────────────────────────────
@@ -141,7 +147,13 @@ export default function ChatPane({
     try {
       await api.delete(`/api/chats/${chat.id}/messages/${msg.id}`);
       if (hasPair) await api.delete(`/api/chats/${chat.id}/messages/${nextMsg.id}`);
-      onShowToast(hasPair ? "🗑 Message pair deleted" : "🗑 Message deleted");
+      
+      const remainingCount = localMsgs.length - (hasPair ? 2 : 1);
+      if (remainingCount <= 0 && onEmptyChat) {
+         onEmptyChat(chat.id);
+      } else {
+         onShowToast(hasPair ? "🗑 Message pair deleted" : "🗑 Message deleted");
+      }
     } catch {
       // Revert both
       setLocalMsgs(prev => {
@@ -179,6 +191,76 @@ export default function ChatPane({
     }
   }
 
+  // ── Bulk Actions ────────────────────────────────────────────────────────
+  function toggleSelection(id) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function bulkPin(pinVal) {
+    if (selectedIds.size === 0) return;
+    const array = Array.from(selectedIds);
+    setSelectMode(false); setSelectedIds(new Set());
+    
+    setLocalMsgs(prev => prev.map(m => array.includes(m.id) ? { ...m, pinned: pinVal } : m));
+    if (pinVal) setPinBar(true);
+    let success = 0;
+    for (const id of array) {
+      try { await api.patch(`/api/chats/${chat.id}/messages/${id}/pin`, { pinned: pinVal }); success++; } catch {}
+    }
+    onShowToast(`📌 ${pinVal ? 'Pinned' : 'Unpinned'} ${success} messages`);
+  }
+
+  async function bulkSaveNote() {
+    if (selectedIds.size === 0) return;
+    const array = Array.from(selectedIds);
+    setSelectMode(false); setSelectedIds(new Set());
+
+    const ordered = localMsgs.filter(m => array.includes(m.id));
+    const title = chat?.title || "Bulk Note";
+    const content = ordered.map(m => `${m.role === 'user' ? 'Prompt' : 'Response'}:\n${m.content}`).join("\n\n");
+    
+    try {
+      await createNote({ title, content, folderId: chat?.folder_id ?? null });
+      onShowToast("📝 Saved to notes!");
+    } catch {
+      onShowToast("⚠️ Could not save to note");
+    }
+  }
+
+  async function bulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} messages?`)) return;
+    
+    const toDeleteSet = new Set(selectedIds);
+    for (const id of Array.from(selectedIds)) {
+       const idx = localMsgs.findIndex(m => m.id === id);
+       if (idx !== -1 && localMsgs[idx].role === 'user' && localMsgs[idx+1]?.role === 'assistant') {
+          toDeleteSet.add(localMsgs[idx+1].id);
+       }
+    }
+    
+    const array = Array.from(toDeleteSet);
+    const beforeCount = localMsgs.length;
+    
+    setSelectMode(false); setSelectedIds(new Set());
+    setLocalMsgs(prev => prev.filter(m => !toDeleteSet.has(m.id)));
+    
+    let success = 0;
+    for (const id of array) {
+      try { await api.delete(`/api/chats/${chat.id}/messages/${id}`); success++; } catch {}
+    }
+    
+    if (beforeCount - array.length <= 0 && onEmptyChat) {
+         onEmptyChat(chat.id);
+    } else {
+         onShowToast(`🗑 Deleted ${success} messages`);
+    }
+  }
+
   // ── Telegram pin bar: cycle newest → older → oldest → wrap ───────────────
   function handlePinBarClick() {
     const pinned = [...localMsgs].filter(m => m.pinned).reverse(); // newest first
@@ -211,7 +293,36 @@ export default function ChatPane({
       <div className="pane-hd">
         <div className="pane-title">{chat?.title || "Chat"}</div>
         <div className="pane-actions">
-          <div className="model-chip"><div className="mc-dot"/>Gemini 1.5 Pro</div>
+          <div className="model-chip" style={{ padding: "0 6px" }}>
+            <div className="mc-dot"/>
+            <select 
+              value={selectedModel} 
+              onChange={e => setSelectedModel(e.target.value)}
+              style={{
+                background: "var(--accent-glow)", 
+                border: "1px solid var(--accent-border)", 
+                borderRadius: "16px",
+                padding: "2px 6px",
+                color: "var(--accent3)", 
+                fontSize: "12px", 
+                fontWeight: 600, 
+                outline: "none", 
+                cursor: "pointer", 
+                fontFamily: "'Syne', sans-serif"
+              }}
+            >
+              <option value="gemini" style={{ background: "var(--card)", color: "var(--text)" }}>Gemini 1.5 Pro</option>
+              <option value="groq" style={{ background: "var(--card)", color: "var(--text)" }}>Groq AI</option>
+              <option value="ask_anything" style={{ background: "var(--card)", color: "var(--text)" }}>Ask Anything</option>
+              <option value="chatgpt" style={{ background: "var(--card)", color: "var(--text)" }}>ChatGPT (Demo)</option>
+              <option value="claude" style={{ background: "var(--card)", color: "var(--text)" }}>Claude 3.5 (Demo)</option>
+            </select>
+          </div>
+          <button className="pa-btn" title="Select Multiple" onClick={() => { setSelectMode(!selectMode); setSelectedIds(new Set()); }} style={{ color: selectMode ? 'var(--accent)' : 'inherit' }}>
+            <svg viewBox="0 0 14 14" fill="none" style={{width: 13, height: 13}}>
+              <path d="M1 7l4 4 8-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
           <button className="pa-btn" title="Chat options" onClick={e => onShowCtx(e, "chat")}>
             <svg viewBox="0 0 14 14" fill="none">
               <circle cx="2.5"  cy="7" r="1.2" fill="currentColor"/>
@@ -300,6 +411,20 @@ export default function ChatPane({
             ref={el => { if (el) msgRefs.current.set(m.id, el); else msgRefs.current.delete(m.id); }}
             className={`msg${m.role === "user" ? " user" : " ai"}${m.pinned ? " pinned" : ""}`}
           >
+            {selectMode && (
+              <div 
+                className="msg-checkbox" 
+                onClick={() => toggleSelection(m.id)}
+                style={{
+                  width: 14, height: 14, borderRadius: 3, border: `1.5px solid ${selectedIds.has(m.id) ? 'var(--accent)' : 'var(--text-dim)'}`,
+                  background: selectedIds.has(m.id) ? 'var(--accent)' : 'transparent',
+                  marginRight: 10, alignSelf: 'flex-start', marginTop: 10, flexShrink: 0,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >
+                {selectedIds.has(m.id) && <svg viewBox="0 0 10 10" fill="none" style={{width: 8, height: 8}}><path d="M2 5l2 2 4-4" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>}
+              </div>
+            )}
             <div className={`m-av${m.role !== "user" ? " ai-av" : " u-av"}`}>
               {m.role !== "user" ? "✦" : "U"}
             </div>
@@ -393,25 +518,28 @@ export default function ChatPane({
           <button className="msg-drop-btn danger" onClick={() => handleDeleteMsg(dropMsg)}>
             <TrashIcon/>
             Delete
-            {(() => {
-              const idx = localMsgs.findIndex(m => m.id === dropMsg.id);
-              return localMsgs[idx + 1]?.role === "assistant"
-                ? <span style={{ fontSize: 10, opacity: 0.5, marginLeft: 4 }}>(+ response)</span>
-                : null;
-            })()}
           </button>
         </div>
       )}
 
       {/* ── Input ── */}
-      <div className="chat-input-area">
-        <div className="input-box">
-          <textarea
-            className="chat-ta"
-            placeholder="Ask anything… (⌘↵ to send)"
-            value={input}
-            disabled={sending}
-            onChange={e => setInput(e.target.value)}
+      {selectMode ? (
+        <div className="chat-bulk-actions" style={{ padding: 12, borderTop: "1px solid var(--border)", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", background: "var(--panel)" }}>
+           <button onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }} style={{ padding: "8px 12px", background: "transparent", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-dim)", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Cancel</button>
+           <button onClick={() => bulkPin(true)} style={{ padding: "8px 12px", background: "var(--accent-glow)", border: "1px solid var(--accent-border)", borderRadius: 8, color: "var(--accent3)", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Pin</button>
+           <button onClick={() => bulkPin(false)} style={{ padding: "8px 12px", background: "var(--accent-glow)", border: "1px solid var(--accent-border)", borderRadius: 8, color: "var(--accent3)", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Unpin</button>
+           <button onClick={bulkSaveNote} style={{ padding: "8px 12px", background: "var(--accent-glow)", border: "1px solid var(--accent-border)", borderRadius: 8, color: "var(--accent3)", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Save Note</button>
+           <button onClick={bulkDelete} style={{ padding: "8px 12px", background: "rgba(255, 50, 50, 0.1)", border: "1px solid rgba(255, 50, 50, 0.3)", borderRadius: 8, color: "#ff6b6b", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Delete</button>
+        </div>
+      ) : (
+        <div className="chat-input-area">
+          <div className="input-box">
+            <textarea
+              className="chat-ta"
+              placeholder="Ask anything…"
+              value={input}
+              disabled={sending}
+              onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
             rows={1}
             onInput={e => {
@@ -426,11 +554,10 @@ export default function ChatPane({
           </button>
         </div>
         <div className="input-hints">
-          <span className="rag-badge"><span className="rag-dot"/>Gemini 1.5 Pro</span>
-          <span><span className="hk">⌘↵</span> send</span>
-          <span><span className="hk">⇧↵</span> newline</span>
+          <span className="rag-badge"><span className="rag-dot"/>{"Ask Anything"}</span>
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
